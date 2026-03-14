@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-import json
 import os
 
 import fitz
@@ -22,16 +21,27 @@ class OCRResult:
 
 
 def _get_client() -> vision.ImageAnnotatorClient:
-    raw = os.environ.get("GCP_CREDENTIALS_JSON", "") or os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
-    # Detect JSON content regardless of any leading characters (e.g. leading slash)
-    if "service_account" in raw:
-        start = raw.find("{")
-        if start >= 0:
-            info = json.loads(raw[start:])
-            creds = service_account.Credentials.from_service_account_info(
-                info, scopes=["https://www.googleapis.com/auth/cloud-vision"]
-            )
-            return vision.ImageAnnotatorClient(credentials=creds)
+    # Build credentials from individual env vars (Railway-friendly)
+    private_key = os.environ.get("GCP_PRIVATE_KEY", "").replace("\\n", "\n")
+    client_email = os.environ.get("GCP_CLIENT_EMAIL", "")
+    if private_key and client_email:
+        info = {
+            "type": "service_account",
+            "project_id": os.environ.get("GCP_PROJECT_ID", ""),
+            "private_key_id": os.environ.get("GCP_PRIVATE_KEY_ID", ""),
+            "private_key": private_key,
+            "client_email": client_email,
+            "client_id": os.environ.get("GCP_CLIENT_ID", ""),
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_x509_cert_url": f"https://www.googleapis.com/robot/v1/metadata/x509/{client_email.replace('@', '%40')}",
+            "universe_domain": "googleapis.com",
+        }
+        creds = service_account.Credentials.from_service_account_info(
+            info, scopes=["https://www.googleapis.com/auth/cloud-vision"]
+        )
+        return vision.ImageAnnotatorClient(credentials=creds)
     return vision.ImageAnnotatorClient()
 
 
