@@ -43,6 +43,12 @@ export default function ResultPage() {
   const verified = result.is_verified;
   const confidence = result.overall_confidence;
 
+  const badge = verified && confidence >= 75
+    ? { label: "✓ VERIFIED", bg: "#0a2e1a", border: "#14532d", color: "#4ade80" }
+    : confidence < 55
+    ? { label: "✗ FLAGGED",  bg: "#2a0a0a", border: "#450a0a", color: "#f87171" }
+    : { label: "⚠ REVIEW",  bg: "#2a1500", border: "#451a03", color: "#fbbf24" };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#0b1a26" }}>
       <div className="animate-fade-slide w-full max-w-md rounded-xl border p-6"
@@ -54,12 +60,8 @@ export default function ResultPage() {
             Doc<span style={{ color: "var(--amber-flame)" }}>Verify</span>
           </span>
           <span className="text-xs px-2 py-1 rounded-full border font-semibold"
-            style={{
-              background: verified ? "#0a2e1a" : "#2a0a0a",
-              borderColor: verified ? "#14532d" : "#450a0a",
-              color: verified ? "#4ade80" : "#f87171",
-            }}>
-            {verified ? "✓ VERIFIED" : "⚠ REVIEW"}
+            style={{ background: badge.bg, borderColor: badge.border, color: badge.color }}>
+            {badge.label}
           </span>
         </div>
 
