@@ -28,7 +28,8 @@ app = FastAPI(title="DocVerify API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "https://doc-verify-core.vercel.app"],
+    allow_origin_regex=r"http://localhost:\d+",
+    allow_origins=["https://doc-verify-core.vercel.app"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
