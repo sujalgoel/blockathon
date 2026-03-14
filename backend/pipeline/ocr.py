@@ -22,14 +22,16 @@ class OCRResult:
 
 
 def _get_client() -> vision.ImageAnnotatorClient:
-    # Accept JSON content from either env var
     raw = os.environ.get("GCP_CREDENTIALS_JSON", "") or os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
-    if raw.strip().startswith("{"):
-        info = json.loads(raw)
-        creds = service_account.Credentials.from_service_account_info(
-            info, scopes=["https://www.googleapis.com/auth/cloud-vision"]
-        )
-        return vision.ImageAnnotatorClient(credentials=creds)
+    # Detect JSON content regardless of any leading characters (e.g. leading slash)
+    if "service_account" in raw:
+        start = raw.find("{")
+        if start >= 0:
+            info = json.loads(raw[start:])
+            creds = service_account.Credentials.from_service_account_info(
+                info, scopes=["https://www.googleapis.com/auth/cloud-vision"]
+            )
+            return vision.ImageAnnotatorClient(credentials=creds)
     return vision.ImageAnnotatorClient()
 
 
