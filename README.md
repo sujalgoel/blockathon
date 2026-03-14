@@ -9,6 +9,16 @@ A full-stack pipeline that compresses citizen documents, runs bilingual OCR, ext
 
 ---
 
+## Live Demo
+
+| | |
+|---|---|
+| **Frontend** | https://doc-verify-core.vercel.app |
+| **Backend API** | https://blockathon-production.up.railway.app |
+| **Officer Dashboard Key** | `18ca1fdc64eb3f5f3b109ac3908624776866c6a00cf101a2f25676d05fac4335` |
+
+---
+
 ## What It Does
 
 Citizens upload their **Aadhaar Card** (front + back) or **PAN Card** through a government-themed portal. The system:
@@ -16,9 +26,10 @@ Citizens upload their **Aadhaar Card** (front + back) or **PAN Card** through a 
 1. **Compresses** images up to 95% using Pillow + PyMuPDF while preserving text and QR legibility
 2. **OCRs** documents via Google Vision API with Hindi + English language hints and per-word confidence scores
 3. **Extracts** structured fields — name, DOB, UID, PAN number, father's name, gender, address, PIN, district
-4. **Cross-validates** extracted data across documents (fuzzy name match, exact DOB match)
-5. **Hashes** compressed files with SHA-256 and writes to Polygon Amoy — tamper-proof and auditable on Polygonscan
-6. **Uploads** optimised images to Cloudflare R2 and returns public URLs in the API response
+4. **Validates** that key identifying fields exist (PAN number for PAN cards, UID for Aadhaar)
+5. **Cross-validates** extracted data across documents (fuzzy name match, exact DOB match)
+6. **Hashes** compressed files with SHA-256 and writes to Polygon Amoy — tamper-proof and auditable on Polygonscan
+7. **Uploads** optimised images to Cloudflare R2 and returns public URLs in the API response
 
 ---
 
@@ -35,7 +46,7 @@ FastAPI Backend
   ├── Compress     (Pillow / PyMuPDF)
   ├── OCR          (Google Cloud Vision)
   ├── Extract      (regex + label-based parsing)
-  ├── Validate     (Levenshtein fuzzy match)
+  ├── Validate     (required fields + Levenshtein fuzzy match)
   ├── Store Image  (Cloudflare R2 via boto3)
   ├── Blockchain   (web3.py → Polygon Amoy)
   └── Persist      (SQLite)
@@ -106,14 +117,14 @@ Form fields:
       "compressed_url": "https://pub-xxx.r2.dev/compressed/UK-2026-38291/pan.jpg",
       "fields": {
         "pan_number":  { "value": "ABCDE1234F", "confidence": 0.98 },
-        "name":        { "value": "SUJAL GOYAL", "confidence": 0.99 },
-        "father_name": { "value": "SANJAY GOYAL", "confidence": 0.99 },
+        "name":        { "value": "SUJAL GOEL", "confidence": 0.99 },
+        "father_name": { "value": "SANJAY GOEL", "confidence": 0.99 },
         "dob":         { "value": "10/03/2005", "confidence": 0.99 }
       }
     }
   ],
   "cross_validation": [
-    { "field": "name_match", "status": "MATCH", "documents": [...], "values": {...} }
+    { "field": "pan_number_present", "status": "MATCH", "documents": [...], "values": {...} }
   ],
   "overall_confidence": 97,
   "is_verified": true,
@@ -142,7 +153,7 @@ Full detail for a single application including compressed image URLs.
 
 - Python 3.13+
 - Node.js 18+
-- Google Cloud Vision API credentials (`gcp-credentials.json`)
+- Google Cloud Vision API service account (set individual `GCP_*` env vars)
 - Cloudflare R2 bucket
 - Polygon Amoy wallet with MATIC (get from [faucet](https://faucet.polygon.technology/))
 
@@ -154,8 +165,8 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Copy and fill in env vars
 cp ../.env.example .env
+# Fill in your values in .env
 
 uvicorn main:app --reload --port 8000
 ```
@@ -165,17 +176,23 @@ uvicorn main:app --reload --port 8000
 ```bash
 cd frontend
 npm install
-echo "VITE_OFFICER_KEY=demo-officer-key-change-in-prod" > .env.local
+# Create .env.local:
+echo "VITE_API_URL=http://localhost:8000" > .env.local
+echo "VITE_OFFICER_KEY=your-officer-key" >> .env.local
 npm run dev
 ```
 
-Open **http://localhost:5174**
+Open **http://localhost:5173**
 
 ### Environment Variables
 
 | Variable | Description |
 |---|---|
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to GCP service account JSON |
+| `GCP_PROJECT_ID` | GCP project ID |
+| `GCP_PRIVATE_KEY_ID` | Service account private key ID |
+| `GCP_PRIVATE_KEY` | Service account private key (with `\n` escaping) |
+| `GCP_CLIENT_EMAIL` | Service account email |
+| `GCP_CLIENT_ID` | Service account client ID |
 | `POLYGON_RPC_URL` | Amoy RPC endpoint |
 | `DEPLOYER_PRIVATE_KEY` | Wallet private key for blockchain writes |
 | `CONTRACT_ADDRESS` | Deployed smart contract address |
@@ -198,10 +215,4 @@ Overall = (avg OCR confidence × 50%) + (cross-validation pass rate × 50%)
 - **55–74%** → REVIEW
 - **< 55%** → FLAGGED
 
----
-
-## Demo
-
-Live frontend: **https://doc-verify-core.vercel.app**
-
-Officer dashboard key: `demo-officer-key-change-in-prod`
+Documents missing key fields (PAN number, Aadhaar UID) are automatically flagged regardless of OCR confidence.

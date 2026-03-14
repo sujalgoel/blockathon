@@ -29,3 +29,12 @@ frontend/dist/
 docs/
 PAN.jpg
 .superpowers/
+Resume.pdf
+*.pdf
+
+# vercel local config
+.vercel/
+frontend/.vercel/
+
+# dot folders
+.*
