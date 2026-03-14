@@ -1,11 +1,30 @@
+# secrets
 .env
+*.env.local
+gcp-credentials.json
+
+# python
 __pycache__/
 *.pyc
 *.pyo
 .venv/
+*.egg-info/
+
+# node
 node_modules/
+
+# build artifacts
 artifacts/
 cache/
-db/verifications.db
-*.egg-info/
+dist/
+frontend/dist/
+
+# database
+*.db
+
+# system
 .DS_Store
+
+# docs / internal
+docs/
+PAN.jpg

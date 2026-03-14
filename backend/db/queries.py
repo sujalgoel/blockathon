@@ -36,14 +36,15 @@ def save_verification(
 
         for doc in documents:
             conn.execute(
-                """INSERT INTO documents (verification_id, doc_type, original_size, compressed_size, fields_json)
-                   VALUES (?, ?, ?, ?, ?)""",
+                """INSERT INTO documents (verification_id, doc_type, original_size, compressed_size, fields_json, compressed_url)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
                 (
                     verification_id,
                     doc["doc_type"],
                     doc["original_size"],
                     doc["compressed_size"],
                     json.dumps(doc["fields"]),
+                    doc.get("compressed_url"),
                 ),
             )
 
@@ -82,7 +83,7 @@ def get_verification(applicant_id: str) -> dict | None:
         verification_id = row["id"]
 
         doc_rows = conn.execute(
-            "SELECT doc_type, original_size, compressed_size, fields_json FROM documents WHERE verification_id = ?",
+            "SELECT doc_type, original_size, compressed_size, fields_json, compressed_url FROM documents WHERE verification_id = ?",
             (verification_id,),
         ).fetchall()
 
@@ -97,6 +98,7 @@ def get_verification(applicant_id: str) -> dict | None:
             "original_size": r["original_size"],
             "compressed_size": r["compressed_size"],
             "fields": json.loads(r["fields_json"]),
+            **({"compressed_url": r["compressed_url"]} if r["compressed_url"] else {}),
         }
         for r in doc_rows
     ]

@@ -30,8 +30,11 @@ class BlockchainResult:
 
 
 def _get_w3() -> Web3:
+    from web3.middleware import geth_poa_middleware
     rpc_url = os.environ["POLYGON_RPC_URL"]
-    return Web3(Web3.HTTPProvider(rpc_url))
+    w3 = Web3(Web3.HTTPProvider(rpc_url))
+    w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+    return w3
 
 
 def _get_contract(w3: Web3):
@@ -66,15 +69,21 @@ def store_verification(
         # Convert raw bytes to bytes32
         doc_hashes_bytes32 = [h[:32].ljust(32, b"\x00") for h in doc_hashes]
 
-        tx = contract.functions.storeVerification(
+        fn = contract.functions.storeVerification(
             applicant_id,
             doc_hashes_bytes32,
             confidence,
             is_verified,
-        ).build_transaction({
+        )
+
+        # Estimate actual gas needed (much cheaper than hardcoded 300k)
+        estimated_gas = fn.estimate_gas({"from": account_address})
+        gas_limit = int(estimated_gas * 1.1)  # 10% safety buffer
+
+        tx = fn.build_transaction({
             "from": account_address,
             "nonce": w3.eth.get_transaction_count(account_address),
-            "gas": 300_000,
+            "gas": gas_limit,
             "gasPrice": w3.eth.gas_price,
         })
 
@@ -82,7 +91,8 @@ def store_verification(
         tx_hash_bytes = w3.eth.send_raw_transaction(signed.rawTransaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash_bytes, timeout=60)
 
-        tx_hash = "0x" + receipt.transactionHash.hex()
+        raw_hex = receipt.transactionHash.hex()
+        tx_hash = raw_hex if raw_hex.startswith("0x") else "0x" + raw_hex
 
         return BlockchainResult(
             tx_hash=tx_hash,

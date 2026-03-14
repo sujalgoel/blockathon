@@ -42,6 +42,16 @@ export default function VerificationCard({ verification, detail, loadingDetail, 
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <a
+            href={`http://localhost:8000/api/verifications/${verification.applicant_id}?key=${import.meta.env.VITE_OFFICER_KEY || "demo-officer-key-change-in-prod"}`}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs px-2 py-0.5 rounded border transition-all hover:text-white"
+            style={{ color: "var(--blue-green)", borderColor: "#1a4a6a" }}
+          >
+            JSON ↗
+          </a>
           <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
             style={{ background: badge.bg, color: badge.color }}>
             {badge.label}
