@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS documents (
     doc_type TEXT NOT NULL,
     original_size INTEGER NOT NULL,
     compressed_size INTEGER NOT NULL,
-    fields_json TEXT NOT NULL
+    fields_json TEXT NOT NULL,
+    compressed_url TEXT
 );
 
 CREATE TABLE IF NOT EXISTS cross_validation (

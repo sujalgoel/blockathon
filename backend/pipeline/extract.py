@@ -15,198 +15,194 @@ class ExtractionResult:
 
 
 # --- Regexes ---
-_UID_RE = re.compile(r"\b(\d{4})\s(\d{4})\s(\d{4})\b")
-_DOB_RE = re.compile(r"\b(\d{2}[/\-]\d{2}[/\-]\d{4}|\d{4}[/\-]\d{2}[/\-]\d{2})\b")
-_PAN_RE = re.compile(r"\b([A-Z]{5}\d{4}[A-Z])\b")
-_INCOME_RE = re.compile(r"(?:Rs\.?\s*|INR\s*)([\d,]+)", re.IGNORECASE)
-_NAME_LINE_RE = re.compile(r"^[A-Z][a-z]+(?: [A-Z][a-z]+)+$")
-_DISTRICT_RE = re.compile(
-    r"\b(Chamoli|Dehradun|Haridwar|Nainital|Almora|Pithoragarh|Pauri|Tehri|Rudraprayag|Uttarkashi|Bageshwar|Champawat|Udham Singh Nagar)\b",
-    re.IGNORECASE,
-)
+_UID_RE       = re.compile(r"\b(\d{4})\s(\d{4})\s(\d{4})\b")
+_DOB_FULL_RE  = re.compile(r"\b(\d{2}[/\-]\d{2}[/\-]\d{4}|\d{4}[/\-]\d{2}[/\-]\d{2})\b")
+_YOB_RE       = re.compile(r"\b(19\d{2}|20[0-2]\d)\b")
+_PAN_RE       = re.compile(r"\b([A-Z]{5}\d{4}[A-Z])\b")
+_PIN_RE       = re.compile(r"\b(\d{6})\b")
+_GENDER_RE    = re.compile(r"\b(Male|Female|Transgender|MALE|FEMALE|पुरुष|महिला)\b")
+# Matches Title Case ("Sujal Goyal") OR ALL CAPS ("SUJAI GOYAL")
+_TITLE_NAME   = re.compile(r"^[A-Z][a-z]+(?: [A-Z][a-z]+)+$")
+_CAPS_NAME    = re.compile(r"^[A-Z]{2,}(?: [A-Z]{2,})+$")
 
 
-def classify_doc_type(text: str) -> str:
-    if any(k in text for k in ("आधार", "UIDAI", "Unique Identification")):
-        return "aadhaar"
-    if any(k in text for k in ("Income Tax", "Permanent Account", "PAN")):
-        return "pan"
-    if any(k in text for k in ("Income Certificate", "आय प्रमाण")):
-        return "income_cert"
-    if any(k in text for k in ("Domicile", "मूल निवास")):
-        return "domicile_cert"
-    if any(k in text for k in ("Caste", "जाति प्रमाण")):
-        return "caste_cert"
-    return "unknown"
+def _avg_conf(words: list, fragment: str) -> float:
+    frags = set(fragment.lower().split())
+    matched = [w for w in words if w.text.lower() in frags]
+    if matched:
+        return round(sum(w.confidence for w in matched) / len(matched), 3)
+    return 0.9
 
 
-def _extract_name(text: str) -> str | None:
-    skip_lines = {"Government of India", "INCOME TAX DEPARTMENT", "GOVT. OF INDIA"}
-    for line in text.splitlines():
-        line = line.strip()
-        if line in skip_lines:
-            continue
-        if _NAME_LINE_RE.match(line):
-            return line
+def _after_label(text: str, *labels) -> str | None:
+    """Extract the first non-empty line after any of the given labels."""
+    for label in labels:
+        pattern = re.compile(rf"{re.escape(label)}\s*[:/]?\s*\n\s*([^\n]+)", re.IGNORECASE)
+        m = pattern.search(text)
+        if m:
+            return m.group(1).strip()
     return None
 
 
-def _extract_district(text: str) -> str | None:
-    m = _DISTRICT_RE.search(text)
-    return m.group(0).title() if m else None
-
-
-def _extract_aadhaar(text: str) -> dict[str, FieldResult]:
-    fields: dict[str, FieldResult] = {}
-
-    uid_m = _UID_RE.search(text)
-    if uid_m:
-        masked = f"XXXX XXXX {uid_m.group(3)}"
-        fields["uid"] = FieldResult(value=masked, confidence=0.99)
-
-    dob_m = _DOB_RE.search(text)
-    if dob_m:
-        fields["dob"] = FieldResult(value=dob_m.group(0), confidence=0.97)
-
-    if "FEMALE" in text.upper():
-        fields["gender"] = FieldResult(value="Female", confidence=0.95)
-    elif "MALE" in text.upper():
-        fields["gender"] = FieldResult(value="Male", confidence=0.95)
-
-    name = _extract_name(text)
-    if name:
-        fields["name"] = FieldResult(value=name, confidence=0.90)
-
-    district = _extract_district(text)
-    if district:
-        fields["district"] = FieldResult(value=district, confidence=0.88)
-
-    return fields
-
-
-def _extract_pan(text: str) -> dict[str, FieldResult]:
-    fields: dict[str, FieldResult] = {}
-
-    pan_m = _PAN_RE.search(text)
-    if pan_m:
-        fields["pan_number"] = FieldResult(value=pan_m.group(1), confidence=0.99)
-
-    dob_m = _DOB_RE.search(text)
-    if dob_m:
-        fields["dob"] = FieldResult(value=dob_m.group(0), confidence=0.97)
-
-    name = _extract_name(text)
-    if name:
-        fields["name"] = FieldResult(value=name, confidence=0.90)
-
-    for line in text.splitlines():
-        if "Father" in line and ":" in line:
-            fname = line.split(":", 1)[1].strip().title()
-            if fname:
-                fields["father_name"] = FieldResult(value=fname, confidence=0.88)
-            break
-
-    return fields
-
-
-def _extract_income_cert(text: str) -> dict[str, FieldResult]:
-    fields: dict[str, FieldResult] = {}
-
-    name = _extract_name(text)
-    if name:
-        fields["name"] = FieldResult(value=name, confidence=0.88)
-
-    income_m = _INCOME_RE.search(text)
-    if income_m:
-        fields["annual_income"] = FieldResult(value=income_m.group(1).replace(",", ""), confidence=0.90)
-
-    district = _extract_district(text)
-    if district:
-        fields["district"] = FieldResult(value=district, confidence=0.88)
-
-    for line in text.splitlines():
-        if "Issuing Authority" in line and ":" in line:
-            auth = line.split(":", 1)[1].strip()
-            if auth:
-                fields["issuing_authority"] = FieldResult(value=auth, confidence=0.85)
-            break
-
-    return fields
-
-
-def _extract_domicile(text: str) -> dict[str, FieldResult]:
-    fields: dict[str, FieldResult] = {}
-
-    for line in text.splitlines():
-        if line.strip().startswith("Name:"):
-            name = line.split(":", 1)[1].strip()
-            if name:
-                fields["name"] = FieldResult(value=name, confidence=0.88)
-            break
-
-    district = _extract_district(text)
-    if district:
-        fields["district"] = FieldResult(value=district, confidence=0.88)
-
-    for line in text.splitlines():
-        if "Address" in line and ":" in line:
-            addr = line.split(":", 1)[1].strip()
-            if addr:
-                fields["address"] = FieldResult(value=addr, confidence=0.85)
-            break
-
-    for line in text.splitlines():
-        if "Issuing Authority" in line and ":" in line:
-            auth = line.split(":", 1)[1].strip()
-            if auth:
-                fields["issuing_authority"] = FieldResult(value=auth, confidence=0.85)
-            break
-
-    return fields
-
-
-def _extract_caste(text: str) -> dict[str, FieldResult]:
-    fields: dict[str, FieldResult] = {}
-
-    for line in text.splitlines():
-        if line.strip().startswith("Name:"):
-            name = line.split(":", 1)[1].strip()
-            if name:
-                fields["name"] = FieldResult(value=name, confidence=0.88)
-            break
-
-    for line in text.splitlines():
-        if line.strip().startswith("Caste:"):
-            caste = line.split(":", 1)[1].strip()
-            if caste:
-                fields["caste"] = FieldResult(value=caste, confidence=0.90)
-            break
-
-    for line in text.splitlines():
-        if "Sub-Caste" in line and ":" in line:
-            sub = line.split(":", 1)[1].strip()
-            if sub:
-                fields["sub_caste"] = FieldResult(value=sub, confidence=0.88)
-            break
-
-    district = _extract_district(text)
-    if district:
-        fields["district"] = FieldResult(value=district, confidence=0.88)
-
-    return fields
-
-
-_EXTRACTORS = {
-    "aadhaar": _extract_aadhaar,
-    "pan": _extract_pan,
-    "income_cert": _extract_income_cert,
-    "domicile_cert": _extract_domicile,
-    "caste_cert": _extract_caste,
-}
+def _name_lines(text: str, skip_words: set) -> list[str]:
+    """Find name-like lines (Title Case or ALL CAPS), excluding known noise words."""
+    lines = [l.strip() for l in text.splitlines()]
+    result = []
+    for l in lines:
+        if any(s in l for s in skip_words):
+            continue
+        if _TITLE_NAME.match(l) or _CAPS_NAME.match(l):
+            result.append(l)
+    return result
 
 
 def extract_fields(doc_type: str, text: str, words: list) -> ExtractionResult:
-    extractor = _EXTRACTORS.get(doc_type)
-    if not extractor:
-        return ExtractionResult(doc_type=doc_type)
-    return ExtractionResult(doc_type=doc_type, fields=extractor(text))
+    if doc_type == "aadhaar_front":
+        return _aadhaar_front(text, words)
+    if doc_type == "aadhaar_back":
+        return _aadhaar_back(text, words)
+    if doc_type == "pan":
+        return _pan(text, words)
+    return ExtractionResult(doc_type=doc_type)
+
+
+# ─── Aadhaar Front ───────────────────────────────────────────────────────────
+
+_AADHAAR_SKIP = {
+    "Government", "India", "Unique", "Identification", "Authority",
+    "Download", "GOVERNMENT", "INDIA", "UIDAI", "Aadhaar",
+}
+
+
+def _aadhaar_front(text: str, words: list) -> ExtractionResult:
+    fields = {}
+
+    # UID (12-digit in groups of 4)
+    uid_m = _UID_RE.search(text)
+    if uid_m:
+        v = f"{uid_m.group(1)} {uid_m.group(2)} {uid_m.group(3)}"
+        fields["uid"] = FieldResult(value=v, confidence=_avg_conf(words, v))
+
+    # DOB — full date preferred, fallback to year of birth
+    dob_m = _DOB_FULL_RE.search(text)
+    if dob_m:
+        fields["dob"] = FieldResult(value=dob_m.group(1), confidence=_avg_conf(words, dob_m.group(1)))
+    else:
+        yob_m = _YOB_RE.search(text)
+        if yob_m:
+            fields["year_of_birth"] = FieldResult(value=yob_m.group(1), confidence=0.85)
+
+    # Gender
+    gender_m = _GENDER_RE.search(text)
+    if gender_m:
+        g = gender_m.group(1)
+        if g == "पुरुष":    g = "Male"
+        elif g == "महिला": g = "Female"
+        fields["gender"] = FieldResult(value=g.capitalize(), confidence=0.95)
+
+    # Name — try label-based first, then fallback to name-line scan
+    name_via_label = _after_label(text, "Name", "नाम")
+    if name_via_label and (_TITLE_NAME.match(name_via_label) or _CAPS_NAME.match(name_via_label)):
+        fields["name"] = FieldResult(value=name_via_label, confidence=_avg_conf(words, name_via_label))
+    else:
+        names = _name_lines(text, _AADHAAR_SKIP)
+        if names:
+            fields["name"] = FieldResult(value=names[0], confidence=_avg_conf(words, names[0]))
+
+    # Mobile (masked — shows last 3 digits only)
+    mob_m = re.search(r"XXXXXXX(\d{3})", text)
+    if mob_m:
+        fields["mobile_last3"] = FieldResult(value=f"XXXXXXX{mob_m.group(1)}", confidence=0.98)
+
+    return ExtractionResult(doc_type="aadhaar_front", fields=fields)
+
+
+# ─── Aadhaar Back ────────────────────────────────────────────────────────────
+
+def _aadhaar_back(text: str, words: list) -> ExtractionResult:
+    fields = {}
+
+    # PIN code (6-digit)
+    pin_m = _PIN_RE.search(text)
+    if pin_m:
+        fields["pin"] = FieldResult(value=pin_m.group(1), confidence=_avg_conf(words, pin_m.group(1)))
+
+    # Address — capture lines starting from S/O, W/O, D/O, C/O, House, Vill, Near, or "Address"
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    addr_lines, capture = [], False
+    for line in lines:
+        if re.search(r"\bAddress\b|S/O|W/O|D/O|C/O|House|Vill|Near|Ward|Plot|Flat|Door", line, re.IGNORECASE):
+            capture = True
+        if capture:
+            addr_lines.append(line)
+        if capture and len(addr_lines) >= 6:
+            break
+
+    if addr_lines:
+        full_addr = ", ".join(addr_lines[:6])
+        fields["address"] = FieldResult(value=full_addr, confidence=0.88)
+
+    # District — look for known Uttarakhand districts
+    district_re = re.compile(
+        r"\b(Chamoli|Dehradun|Haridwar|Nainital|Almora|Pithoragarh|Pauri|Tehri|"
+        r"Rudraprayag|Uttarkashi|Bageshwar|Champawat|Udham Singh Nagar)\b",
+        re.IGNORECASE,
+    )
+    dist_m = district_re.search(text)
+    if dist_m:
+        fields["district"] = FieldResult(value=dist_m.group(1).title(), confidence=0.92)
+
+    # State
+    state_m = re.search(r"\b(Uttarakhand|Uttar Pradesh|Delhi|Maharashtra|Karnataka|Tamil Nadu|Rajasthan|Gujarat|Bihar|West Bengal)\b", text, re.IGNORECASE)
+    if state_m:
+        fields["state"] = FieldResult(value=state_m.group(1).title(), confidence=0.92)
+
+    return ExtractionResult(doc_type="aadhaar_back", fields=fields)
+
+
+# ─── PAN Card ────────────────────────────────────────────────────────────────
+
+_PAN_SKIP = {
+    "Income", "Tax", "Department", "Government", "India", "Permanent",
+    "Account", "INCOME", "TAX", "DEPARTMENT", "GOVT", "PERMANENT",
+}
+
+
+def _pan(text: str, words: list) -> ExtractionResult:
+    fields = {}
+
+    # PAN number (ABCDE1234F)
+    pan_m = _PAN_RE.search(text)
+    if pan_m:
+        fields["pan_number"] = FieldResult(value=pan_m.group(1), confidence=_avg_conf(words, pan_m.group(1)))
+
+    # DOB
+    dob_m = _DOB_FULL_RE.search(text)
+    if dob_m:
+        fields["dob"] = FieldResult(value=dob_m.group(1), confidence=_avg_conf(words, dob_m.group(1)))
+
+    # Name — label-based (most reliable for PAN)
+    name_via_label = _after_label(text, "Name", "नाम")
+    if name_via_label and (_TITLE_NAME.match(name_via_label) or _CAPS_NAME.match(name_via_label)):
+        fields["name"] = FieldResult(value=name_via_label, confidence=_avg_conf(words, name_via_label))
+
+    # Father's name — label-based
+    father_via_label = _after_label(text, "Father's Name", "पिता का नाम")
+    if father_via_label and (_TITLE_NAME.match(father_via_label) or _CAPS_NAME.match(father_via_label)):
+        fields["father_name"] = FieldResult(value=father_via_label, confidence=_avg_conf(words, father_via_label))
+
+    # Fallback: scan name lines if label-based failed
+    if "name" not in fields or "father_name" not in fields:
+        names = _name_lines(text, _PAN_SKIP)
+        if "name" not in fields and len(names) >= 1:
+            fields["name"] = FieldResult(value=names[0], confidence=_avg_conf(words, names[0]))
+        if "father_name" not in fields and len(names) >= 2:
+            fields["father_name"] = FieldResult(value=names[1], confidence=_avg_conf(words, names[1]))
+
+    # Issue date (8-digit DDMMYYYY at end, different from DOB)
+    # DOB already consumed the first date; find a second one
+    all_dates = _DOB_FULL_RE.findall(text)
+    if len(all_dates) >= 2:
+        fields["issue_date"] = FieldResult(value=all_dates[-1], confidence=0.85)
+
+    return ExtractionResult(doc_type="pan", fields=fields)

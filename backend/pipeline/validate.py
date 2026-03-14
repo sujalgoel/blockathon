@@ -77,7 +77,7 @@ def _check_district_match(docs: list[dict]) -> ValidationCheck | None:
     return ValidationCheck(field="district_match", status=status, documents=doc_types, values=values)
 
 
-def validate(docs: list[dict]) -> ValidationResult:
+def validate(docs: list[dict], declared_name: str = "") -> ValidationResult:
     checks: list[ValidationCheck] = []
 
     name_check = _check_name_match(docs)

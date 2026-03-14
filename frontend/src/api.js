@@ -2,10 +2,13 @@ import axios from "axios";
 
 const OFFICER_KEY = import.meta.env.VITE_OFFICER_KEY || "demo-officer-key-change-in-prod";
 
-export async function verifyDocuments(applicantId, files) {
+export async function verifyDocuments(applicantId, docType, uploads) {
   const form = new FormData();
   form.append("applicant_id", applicantId);
-  files.forEach((f) => form.append("files", f));
+  form.append("doc_type", docType);
+  if (uploads.aadhaar_front) form.append("aadhaar_front", uploads.aadhaar_front);
+  if (uploads.aadhaar_back)  form.append("aadhaar_back",  uploads.aadhaar_back);
+  if (uploads.pan)           form.append("pan",           uploads.pan);
   const { data } = await axios.post("/api/verify", form);
   return data;
 }
