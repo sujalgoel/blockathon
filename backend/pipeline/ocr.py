@@ -1,8 +1,12 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
+import json
+import os
+
 import fitz
 from google.cloud import vision
+from google.oauth2 import service_account
 
 
 @dataclass
@@ -18,6 +22,13 @@ class OCRResult:
 
 
 def _get_client() -> vision.ImageAnnotatorClient:
+    raw = os.environ.get("GCP_CREDENTIALS_JSON", "")
+    if raw:
+        info = json.loads(raw)
+        creds = service_account.Credentials.from_service_account_info(
+            info, scopes=["https://www.googleapis.com/auth/cloud-vision"]
+        )
+        return vision.ImageAnnotatorClient(credentials=creds)
     return vision.ImageAnnotatorClient()
 
 
