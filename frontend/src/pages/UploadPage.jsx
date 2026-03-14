@@ -8,6 +8,14 @@ function generateAppId() {
   return `UK-${year}-${num}`;
 }
 
+const STEPS = [
+  { icon: "🗜️", title: "Compress", desc: "Files shrunk up to 95% using Pillow + PyMuPDF — preserving text & QR legibility." },
+  { icon: "🔍", title: "OCR", desc: "Google Vision reads Hindi + English mixed script with per-word confidence scores." },
+  { icon: "📋", title: "Extract", desc: "Name, DOB, UID, PAN number, gender, address — pulled per document side." },
+  { icon: "✅", title: "Cross-Validate", desc: "Name (fuzzy match) and DOB compared between Aadhaar and PAN." },
+  { icon: "⛓️", title: "Blockchain", desc: "SHA-256 hashes written to Polygon Amoy — tamper-proof, verifiable on Polygonscan." },
+];
+
 function DropZone({ slot, label, hint, file, onFile }) {
   const inputId = `file-${slot}`;
   const handleDrop = useCallback((e) => {
@@ -134,6 +142,30 @@ export default function UploadPage() {
           <span className="text-xs px-2 py-1 rounded-full border" style={{ background: "#0d3350", borderColor: "#1a4a6a", color: "var(--sky-blue-light)" }}>
             Apuni Sarkar · Uttarakhand
           </span>
+        </div>
+
+        {/* How It Works */}
+        <div className="animate-fade-slide mb-6" style={{ animationDelay: "60ms" }}>
+          <p className="text-xs uppercase tracking-widest mb-3" style={{ color: "#4a7a99" }}>How It Works</p>
+          <div className="rounded-xl border p-4" style={{ background: "var(--deep-space-blue)", borderColor: "#0d3350" }}>
+            {STEPS.map((step, i) => (
+              <div key={step.title} className="flex gap-3" style={{ animationDelay: `${100 + i * 70}ms` }}>
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center justify-center rounded-full text-base"
+                    style={{ width: 34, height: 34, background: "#011e30", border: "1px solid #1a4a6a", flexShrink: 0 }}>
+                    {step.icon}
+                  </div>
+                  {i < STEPS.length - 1 && (
+                    <div style={{ width: 1, flex: 1, minHeight: 12, background: "#1a4a6a", margin: "3px 0" }} />
+                  )}
+                </div>
+                <div className={i < STEPS.length - 1 ? "pb-3" : ""}>
+                  <p className="text-sm font-semibold" style={{ color: "var(--sky-blue-light)" }}>{step.title}</p>
+                  <p className="text-xs leading-relaxed" style={{ color: "#4a7a99" }}>{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="animate-fade-slide rounded-xl border p-6" style={{ background: "var(--deep-space-blue)", borderColor: "#0d3350" }}>

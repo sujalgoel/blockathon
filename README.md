@@ -202,6 +202,6 @@ Overall = (avg OCR confidence × 50%) + (cross-validation pass rate × 50%)
 
 ## Demo
 
-Live frontend: **https://frontend-ax4c0oayx-thisissujal.vercel.app**
+Live frontend: **https://doc-verify-core.vercel.app**
 
 Officer dashboard key: `demo-officer-key-change-in-prod`
