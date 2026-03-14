@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const BASE = import.meta.env.VITE_API_URL || "";
-const OFFICER_KEY = import.meta.env.VITE_OFFICER_KEY || "demo-officer-key-change-in-prod";
+const OFFICER_KEY = import.meta.env.VITE_OFFICER_KEY || "18ca1fdc64eb3f5f3b109ac3908624776866c6a00cf101a2f25676d05fac4335";
 
 export async function verifyDocuments(applicantId, docType, uploads) {
   const form = new FormData();

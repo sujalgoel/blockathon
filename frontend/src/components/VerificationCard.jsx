@@ -43,7 +43,7 @@ export default function VerificationCard({ verification, detail, loadingDetail, 
         </div>
         <div className="flex items-center gap-2">
           <a
-            href={`http://localhost:8000/api/verifications/${verification.applicant_id}?key=${import.meta.env.VITE_OFFICER_KEY || "demo-officer-key-change-in-prod"}`}
+            href={`http://localhost:8000/api/verifications/${verification.applicant_id}?key=${import.meta.env.VITE_OFFICER_KEY || "18ca1fdc64eb3f5f3b109ac3908624776866c6a00cf101a2f25676d05fac4335"}`}
             target="_blank"
             rel="noreferrer"
             onClick={(e) => e.stopPropagation()}
