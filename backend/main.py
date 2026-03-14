@@ -6,13 +6,6 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-# Resolve GOOGLE_APPLICATION_CREDENTIALS to absolute path
-_gcp = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
-if _gcp and not os.path.isabs(_gcp):
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(
-        (Path(__file__).parent.parent / _gcp).resolve()
-    )
-
 from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 
