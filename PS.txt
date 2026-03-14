@@ -1,0 +1,71 @@
+﻿HACKATHON PROBLEM STATEMENTS IIT Roorkee — Hackathon
+IIT Roorkee Hackathon Problem Statements 
+Overview 
+This document contains two problem statements designed for a hackathon at IIT Roorkee. Each problem addresses a real operational challenge faced by government citizen service portals and requires teams to build technically rigorous prototypes that can later be implemented on the e-Services platform. 
+The problems span two critical domains of digital governance: document intelligence and Upload Optimization Engine, adaptive citizen interface engine. All two are designed to require genuine algorithmic innovation, not just a web application wrapper. 
+Problem Statements at a Glance 
+# 
+	Problem Title 
+	Domain
+	01 
+	Intelligent Document Verification & Upload Optimization Engine
+	Document Intelligence / 
+Upload Optimization
+	02 
+	Adaptive Citizen Interface Engine 
+	Accessibility / Digital Divide / AI UX
+	
+
+
+
+Page 2
+IIT Roorkee Hackathon Problem Statements 
+Problem Statement 01 
+Intelligent Document Processing & Upload Optimization Engine for Citizen-Uploaded Identity Documents 
+Background / Context 
+Government service portals like Apuni Sarkar require citizens to upload identity documents (Aadhaar, income certificates, domicile proofs, caste certificates, PAN cards, etc.) as part of service applications. Currently, document handling presents two significant challenges: first, 
+citizens often upload high-resolution photographs or scans that are unnecessarily large (5 MB or more per file), which causes slow uploads on limited mobile networks, excessive storage consumption, and processing delays. Second, verification of these documents is entirely manual — officers visually inspect each document, a process that is slow, error-prone, and inefficient. Uttarakhand processes hundreds of thousands of such applications annually, and the combination of oversized uploads and manual verification creates a significant operational bottleneck. 
+Core Problem 
+Design and build an intelligent document processing pipeline with built-in upload optimization that can: 
+(a) Automatically compress and resize citizen-uploaded documents during the upload process itself, reducing file size significantly while maintaining sufficient visual clarity so that the document remains clearly readable and not blurred. For example, a document uploaded at approximately 5 MB should be reduced to a smaller optimized size while preserving acceptable quality for all downstream processing. 
+(b) Perform this compression automatically at the time of upload without requiring any manual action from the citizen — the user simply selects and uploads the file, and the system handles optimization transparently. 
+(c) Automatically extract structured fields from diverse Indian government documents using OCR, even when documents are photographed at angles, poorly lit, or partially obscured. 
+(d) Cross-validate extracted fields against each other and against application metadata (e.g., does the name on Aadhaar match the name in the application form? Does the address on the domicile certificate match the declared district?). 
+(e) Produce a per-document verification summary with field-level confidence scores and a clear breakdown that officers can act on. 
+Expected Solution Approach 
+Teams should build a multi-stage pipeline that begins with a client-side or server-side document compression layer. This layer should intelligently resize and compress uploaded images/PDFs based on document type, applying appropriate quality thresholds that preserve text readability and visual clarity of seals, signatures, and printed content. The compression must be format-aware — handling JPEG, PNG, and PDF inputs — and should target a configurable output size range while ensuring the document remains legible for both automated OCR processing and manual officer review. 
+Following compression, the pipeline should include a preprocessing layer for deskewing, denoising, and resolution normalization; an OCR engine with layout-aware extraction for structured fields that handles the extreme variety of Indian government document formats; and a cross-field validation graph that checks logical consistency across documents within a single 
+Page 3
+IIT Roorkee Hackathon Problem Statements 
+application. The final output should be an API that accepts a set of documents and returns optimized files, structured extracted data, and a verification assessment. 
+Technical Challenges 
+1. Achieving effective compression ratios without degrading text clarity, especially for documents containing fine print, QR codes, watermarks, and mixed Hindi/English content. The compression must preserve enough quality for reliable OCR extraction downstream. 
+2. Handling the extreme variety of Indian government document formats — each state, each department, and even each issuing year can have different templates, fonts, seals, and layouts. 
+3. Building OCR that works on low-quality camera captures with Hindi/Devanagari + English mixed-script content, skewed angles, and partial occlusion, particularly after compression has been applied. 
+4. Making the verification results explainable — officers need to understand why specific fields were flagged for review, not just see a score. 
+5. Processing at scale with latency under 10 seconds per document set (including compression) for real-time use during application submission. 
+6. Ensuring the compression pipeline works seamlessly across diverse device types and file formats that citizens use — from high-resolution DSLR scans to low-quality mobile camera captures. 
+Page 4
+IIT Roorkee Hackathon Problem Statements 
+Problem Statement 02 
+Adaptive Citizen Interface Engine: AI-Driven Dynamic Form Simplification and Assisted Completion for Low-Literacy Users 
+Background / Context 
+Uttarakhand has a significant rural population spread across remote hill districts where digital literacy is low, internet connectivity is intermittent, and many citizens interact with government portals through basic smartphones on slow mobile networks. On Apuni Sarkar, a citizen applying for even a simple income certificate must navigate a multi-step form with fields like 'Revenue Village', 'Tehsil', 'Pargana', and 'Aadhaar-linked details' — terminology and data-entry patterns that confuse first-time users. Drop-off rates on such forms are extremely high: citizens abandon applications midway, visit Common Service Centres (CSCs) and pay intermediaries, or simply give up on their entitlement. The current portal serves the same form interface to a tech-savvy urban professional and to an elderly farmer in Chamoli — despite their vastly different needs, device capabilities, and comprehension levels. 
+Core Problem 
+Design an AI-powered adaptive form engine that can: 
+(a) Dynamically adjust the complexity, layout, language, and input method of government application forms based on real-time signals — the user’s device type, screen size, network speed, input behavior (typing speed, error frequency, backtracking patterns), and inferred literacy level. 
+(b) Provide intelligent auto-completion and field pre-population by learning from the citizen’s own partial inputs, previously submitted applications, and demographic patterns (e.g., if the citizen’s Aadhaar shows a specific tehsil, pre-fill revenue village options and suppress irrelevant fields). 
+(c) Offer progressive disclosure — showing only the minimum required fields initially and revealing additional fields only when contextually triggered, reducing cognitive overload. 
+(d) Implement a real-time ‘smart assistant’ mode that converts complex form fields into simple conversational questions in Hindi/English, where the citizen answers naturally and the system maps responses to the correct form fields. 
+(e) Detect when a citizen is struggling (long pauses, repeated errors, field abandonment) and proactively offer voice-guided or simplified alternative input modes. 
+Expected Solution Approach 
+Teams should build a client-side behavior analytics layer that captures interaction signals (touch patterns, dwell times, error rates, scroll behavior) and feeds them into a lightweight user profiling model. The form rendering engine should use a hybrid system: a rule-based component for device/network adaptation and a trained classifier for literacy-level inference based on behavioral signals. The conversational fallback should use a structured dialogue manager that maps natural language answers to specific form field values using intent classification and entity extraction.The entire system must work offline-first for intermittent connectivity scenarios, syncing completed forms when network is available. 
+Technical Challenges 
+Page 5
+IIT Roorkee Hackathon Problem Statements 
+7. Inferring literacy level and digital comfort from behavioral signals alone without asking intrusive questions — the model must be accurate enough to meaningfully change the interface but not so aggressive that it condescend to capable users. 
+8. Mapping free-form Hindi/Hinglish conversational answers to highly structured government form fields — e.g., a citizen saying ‘mere pita ji ki zameen Pauri mein hai’ should correctly populate the district field with ‘Pauri Garhwal’ and the relationship field with ‘Father’. 
+9. Offline-first architecture: the adaptive engine, auto-completion, and conversational system must function with minimal server calls on a 2G connection with a budget Android phone. 
+10. Ensuring that form simplification does not compromise data quality — adaptive interfaces that skip or hide fields must still collect all mandatory data required by government rules. 
+11. Privacy constraints: behavioral profiling and literacy inference must not create a persistent ‘digital capability score’ that could be used to discriminate against citizens in other contexts. 
+Page 6
