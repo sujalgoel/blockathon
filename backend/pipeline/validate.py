@@ -77,8 +77,27 @@ def _check_district_match(docs: list[dict]) -> ValidationCheck | None:
     return ValidationCheck(field="district_match", status=status, documents=doc_types, values=values)
 
 
+# Required identifying field per doc type — must be present or doc is invalid
+_REQUIRED_FIELD = {
+    "pan": "pan_number",
+    "aadhaar_front": "uid",
+    "aadhaar_back": None,
+}
+
+
 def validate(docs: list[dict], declared_name: str = "") -> ValidationResult:
     checks: list[ValidationCheck] = []
+
+    # Check that each document has its key identifying field
+    for d in docs:
+        required = _REQUIRED_FIELD.get(d["doc_type"])
+        if required and required not in d["fields"]:
+            checks.append(ValidationCheck(
+                field=f"{required}_present",
+                status="MISSING",
+                documents=[d["doc_type"]],
+                values={d["doc_type"]: "not found"},
+            ))
 
     name_check = _check_name_match(docs)
     if name_check:
@@ -98,13 +117,13 @@ def validate(docs: list[dict], declared_name: str = "") -> ValidationResult:
         for d in docs
         for f in d["fields"].values()
     ]
-    avg_ocr_conf = sum(all_confidences) / len(all_confidences) if all_confidences else 0.5
+    avg_ocr_conf = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
 
-    # Cross-val pass rate
+    # Cross-val pass rate (MISSING counts as fail)
     if checks:
         pass_rate = sum(1 for c in checks if c.status == "MATCH") / len(checks)
     else:
-        pass_rate = 1.0  # no checks to run = no contradictions
+        pass_rate = 1.0
 
     overall = ((avg_ocr_conf * 0.5) + (pass_rate * 0.5)) * 100
 
