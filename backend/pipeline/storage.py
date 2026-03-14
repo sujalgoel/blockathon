@@ -16,18 +16,20 @@ def _get_client():
 
 
 
-def upload_compressed(applicant_id: str, doc_type: str, data: bytes) -> str | None:
-    """Upload compressed image bytes to R2. Returns public URL or None on failure."""
+def upload_compressed(applicant_id: str, doc_type: str, data: bytes, fmt: str = "jpeg") -> str | None:
+    """Upload compressed bytes to R2. Returns public URL or None on failure."""
     try:
         bucket = os.environ["R2_BUCKET_NAME"]
         public_url = os.environ["R2_PUBLIC_URL"].rstrip("/")
-        key = f"compressed/{applicant_id}/{doc_type}.jpg"
+        ext = "pdf" if fmt == "pdf" else "jpg"
+        content_type = "application/pdf" if fmt == "pdf" else "image/jpeg"
+        key = f"compressed/{applicant_id}/{doc_type}.{ext}"
 
         _get_client().put_object(
             Bucket=bucket,
             Key=key,
             Body=data,
-            ContentType="image/jpeg",
+            ContentType=content_type,
         )
         return f"{public_url}/{key}"
     except Exception as e:

@@ -74,6 +74,7 @@ async def _process_file(f: UploadFile, doc_type: str) -> dict:
             for k, v in extraction.fields.items()
         },
         "_compressed_bytes": comp.compressed_bytes,
+        "_fmt": comp.format,
     }
 
 
@@ -104,7 +105,7 @@ async def verify(
 
     # Upload compressed images to R2 (best-effort, non-blocking)
     for d in doc_results:
-        url = upload_compressed(applicant_id, d["doc_type"], d["_compressed_bytes"])
+        url = upload_compressed(applicant_id, d["doc_type"], d["_compressed_bytes"], d["_fmt"])
         if url:
             d["compressed_url"] = url
 
@@ -121,6 +122,7 @@ async def verify(
     # Strip internal bytes
     for d in doc_results:
         d.pop("_compressed_bytes", None)
+        d.pop("_fmt", None)
 
     cross_val_dicts = [
         {"field": c.field, "status": c.status, "documents": c.documents, "values": c.values}
