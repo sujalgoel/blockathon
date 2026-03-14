@@ -22,8 +22,9 @@ class OCRResult:
 
 
 def _get_client() -> vision.ImageAnnotatorClient:
-    raw = os.environ.get("GCP_CREDENTIALS_JSON", "")
-    if raw:
+    # Accept JSON content from either env var
+    raw = os.environ.get("GCP_CREDENTIALS_JSON", "") or os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
+    if raw.strip().startswith("{"):
         info = json.loads(raw)
         creds = service_account.Credentials.from_service_account_info(
             info, scopes=["https://www.googleapis.com/auth/cloud-vision"]
