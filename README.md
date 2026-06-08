@@ -17,6 +17,8 @@ A full-stack pipeline that compresses citizen documents, runs bilingual OCR, ext
 | **Backend API** | https://blockathon-production.up.railway.app |
 | **Officer Dashboard Key** | `18ca1fdc64eb3f5f3b109ac3908624776866c6a00cf101a2f25676d05fac4335` |
 
+> **Note:** The officer key is published here on purpose so judges can try the officer dashboard end to end without a separate handoff. It's a demo credential for a testnet deployment — in production this would be a rotated secret held only in Railway's environment, never committed.
+
 ---
 
 ## What It Does
@@ -30,6 +32,20 @@ Citizens upload their **Aadhaar Card** (front + back) or **PAN Card** through a 
 5. **Cross-validates** extracted data across documents (fuzzy name match, exact DOB match)
 6. **Hashes** compressed files with SHA-256 and writes to Polygon Amoy — tamper-proof and auditable on Polygonscan
 7. **Uploads** optimised images to Cloudflare R2 and returns public URLs in the API response
+
+---
+
+## How This Was Built
+
+I designed and drove this project end to end, using [Claude Code](https://claude.com/claude-code) as an AI pair-programmer under a deliberate workflow: brainstorm → spec → plan → test-driven implementation. The artifacts are in the repo if you want to trace the process — the design spec and implementation plan are in `docs/superpowers/`, and the early architecture and UI explorations are in `.superpowers/brainstorm/`.
+
+**The architecture was my call.** I framed the problem, chose the stack, and designed the system: a synchronous FastAPI monolith with each pipeline stage as an isolated module (compress → OCR → extract → validate → blockchain), SQLite for demo storage, React + Vite on the front end, and Polygon Amoy for the on-chain receipts — Amoy specifically, because Mumbai had been deprecated. I defined the confidence model (50% OCR / 50% cross-validation) and the VERIFIED / REVIEW / FLAGGED thresholds.
+
+**The production engineering was mine, by hand.** Everything that touches the real world: both deploys (Vercel for the front end, Railway for the backend), loading Google Vision credentials from individual env vars on Railway, R2 file-extension handling, SPA routing on Vercel, CORS, every secret, and the Amoy wallet — faucet MATIC, contract deployment, and key management. I kept AI out of deploys entirely and curated every commit.
+
+**Where AI accelerated me.** Against the plan I set, Claude wrote the well-specified internals test-first — the compression logic, the Vision OCR wrapper, the regex/label field extraction, the Levenshtein cross-validation, the Solidity contract and its Hardhat tests, the web3.py writer, and the React components. I reviewed each module and corrected it wherever it drifted from the design.
+
+The decisions, the production wiring, and the live debugging were mine; the AI was a fast tool I directed against a plan I owned.
 
 ---
 
@@ -105,7 +121,7 @@ Form fields:
   pan            file            Required if doc_type=pan
 ```
 
-**Response:**
+**Response:** *(sample values — `pan_number` is the standard dummy PAN; the name/DOB are my own already-public details, used intentionally to show a real end-to-end extraction)*
 ```json
 {
   "applicant_id": "UK-2026-38291",
@@ -137,13 +153,15 @@ Form fields:
 }
 ```
 
-### `GET /api/verifications?key=<officer_key>`
+### `GET /api/verifications`
 
 List all verifications (officer only).
 
-### `GET /api/verifications/:id?key=<officer_key>`
+### `GET /api/verifications/:id`
 
 Full detail for a single application including compressed image URLs.
+
+Both officer routes authenticate the key via either an `X-Officer-Key` header or a `?key=<officer_key>` query param.
 
 ---
 
